@@ -3,12 +3,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:record/record.dart'; // <-- Add this import
+import 'package:audioplayers/audioplayers.dart'; // <-- Add this import
+import 'package:path_provider/path_provider.dart';
 
  const String crackedRoadImageAsset = 'assets/cracked_road.jpg';
 
 // Add these two lists for dropdown options
-const List<String> issueTypes = ['Pothole', 'Broken Streetlight', 'Garbage', 'Water Logging'];
+const List<String> issueTypes = ['Pothole', 'Broken Streetlight', 'Garbage', 'Water Logging', 'Possible Stampade'];
 const List<String> priorityLevels = ['Low', 'Medium', 'High'];
 
 class ReportIssuePage extends StatefulWidget {
@@ -44,6 +46,8 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+    _audioRecorder = AudioRecorder();
+    _audioPlayer = AudioPlayer();
   }
 
   
@@ -111,6 +115,76 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
   String selectedIssueType = issueTypes[0];
   String selectedPriority = priorityLevels[0];
 
+
+
+
+ late AudioRecorder _audioRecorder;
+  late AudioPlayer _audioPlayer;
+  bool _isRecording = false;
+  String? _audioPath;
+
+ 
+
+  @override
+  void dispose() {
+    // --- NEW: Dispose of recorders ---
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  // --- NEW: Audio Recorder Functions ---
+
+  Future<void> _startRecording() async {
+    try {
+      if (await _audioRecorder.hasPermission()) {
+        final directory = await getApplicationDocumentsDirectory();
+        final path = '${directory.path}/my_voice_note.m4a';
+        
+        await _audioRecorder.start(const RecordConfig(), path: path);
+
+        setState(() {
+          _isRecording = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error starting recording: $e');
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+      setState(() {
+        _isRecording = false;
+        _audioPath = path;
+      });
+    } catch (e) {
+      debugPrint('Error stopping recording: $e');
+    }
+  }
+
+  Future<void> _playRecording() async {
+    if (_audioPath != null) {
+      try {
+        Source urlSource = UrlSource(_audioPath!);
+        await _audioPlayer.play(urlSource);
+      } catch (e) {
+        debugPrint('Error playing recording: $e');
+      }
+    }
+  }
+  
+  void _deleteRecording() {
+    setState(() {
+      _audioPath = null;
+    });
+  }
+
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -136,15 +210,15 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Fix My Nagar',
+                  'REPORT ISSUE',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E3A5F),
+                    color: Color.fromARGB(255, 196, 58, 58),
                   ),
                 ),
-                // const SizedBox(height: 40),
+                 const SizedBox(height: 20),
 
                 // ## 1. Upload Section
                 Row(
@@ -314,35 +388,68 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
 
   Widget _buildVoiceNoteUpload() {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.mic_none_outlined, color: Colors.grey, size: 28),
-        const SizedBox(height: 8),
-        Container(
-          width: 95,
-          height: 95,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF56D3A0), Color(0xFF33C08D)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(15.0),
-          ),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        if (_audioPath != null)
+          // --- UI when a recording exists ---
+          Column(
             children: [
-              Icon(Icons.cloud_upload_outlined, color: Colors.white),
-              SizedBox(height: 4),
-              Text(
-                'Upload\nVoice Note',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 12, height: 1.2),
+              const Text("Voice Note Added", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A5F))),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.play_circle_fill, color: Colors.green, size: 35),
+                    onPressed: _playRecording,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 35),
+                    onPressed: _deleteRecording,
+                  ),
+                ],
               ),
-              SizedBox(height: 4),
-              Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 16),
             ],
+          )
+        else
+          // --- UI for recording ---
+          GestureDetector(
+            onTap: _isRecording ? _stopRecording : _startRecording,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: _isRecording
+                      ? [Colors.red.shade400, Colors.red.shade700]
+                      : [const Color(0xFF56D3A0), const Color(0xFF33C08D)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(15.0),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _isRecording ? Icons.stop : Icons.mic,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _isRecording ? 'Stop\nRecording' : 'Record\nVoice Note',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
       ],
     );
   }

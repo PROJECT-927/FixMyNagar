@@ -8,6 +8,8 @@
 <string>This app needs access to your photo library to allow you to upload a picture of the issue you are reporting.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Fixmynagar</string>
+	<key>NSMicrophoneUsageDescription</key>
+<string>This app needs access to the microphone to record your voice note for the issue report.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
