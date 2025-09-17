@@ -1,8 +1,10 @@
+import 'dart:io';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
-// Create a placeholder for your image asset.
-// Create a folder named `assets` in your project root and add an image
-// named `cracked_road.jpg`.
+
  const String crackedRoadImageAsset = 'assets/cracked_road.jpg';
 
 // Add these two lists for dropdown options
@@ -17,6 +19,95 @@ class ReportIssuePage extends StatefulWidget {
 }
 
 class _ReportIssuePageState extends State<ReportIssuePage> {
+
+  XFile? _imageFile;
+  final ImagePicker _picker = ImagePicker();
+
+  // Function to handle picking an image from the gallery
+  Future<void> _pickImage() async {
+    final XFile? selectedImage = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (selectedImage != null) {
+      // Use setState to update the UI with the new image
+      setState(() {
+        _imageFile = selectedImage;
+      });
+    }
+  }
+
+
+ // State variables to hold location data and loading state
+  String _currentAddress = "Fetching location...";
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  
+  Future<void> _getCurrentLocation() async {
+    // Show loading indicator immediately upon tap
+    setState(() {
+      _isLoading = true;
+      _currentAddress = "Fetching...";
+    });
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() {
+        _currentAddress = "Location services are disabled.";
+        _isLoading = false;
+      });
+      await Geolocator.openAppSettings();
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() {
+          _currentAddress = "Location permissions denied.";
+          _isLoading = false;
+        });
+        await Geolocator.openAppSettings();
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _currentAddress = "Permissions permanently denied.";
+        _isLoading = false;
+      });
+      await Geolocator.openAppSettings();
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        final address = '${place.street}, ${place.locality}, ${place.postalCode}';
+        setState(() {
+          _currentAddress = address;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _currentAddress = "Failed to get location.";
+        _isLoading = false;
+      });
+    }
+  }
   String selectedIssueType = issueTypes[0];
   String selectedPriority = priorityLevels[0];
 
@@ -53,7 +144,7 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
                     color: Color(0xFF1E3A5F),
                   ),
                 ),
-                const SizedBox(height: 40),
+                // const SizedBox(height: 40),
 
                 // ## 1. Upload Section
                 Row(
@@ -165,12 +256,11 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
 
                 // ## 5. Location Section
                 _buildLocationInfo(),
-                const SizedBox(height: 60),
+                const SizedBox(height: 25),
 
                 // ## 6. Submit Button
                 _buildSubmitButton(),
-                  const SizedBox(height: 40),
-
+            
               ],
             ),
           ),
@@ -181,31 +271,42 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
 
   Widget _buildPhotoUpload() {
     return Expanded(
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15.0),
-          image: const DecorationImage(
-            image: AssetImage(crackedRoadImageAsset),
-            fit: BoxFit.cover,
-          ),
-        ),
+      // Use GestureDetector to make the container tappable
+      child: GestureDetector(
+        onTap: _pickImage, // Call the image picker function on tap
         child: Container(
+          height: 120,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15.0),
-            color: Colors.black.withOpacity(0.3),
+            // Conditionally display the selected image or the placeholder
+            image: DecorationImage(
+              // Use FileImage for the selected image, otherwise use the asset
+              image: _imageFile == null
+                  ? const AssetImage(crackedRoadImageAsset) as ImageProvider
+                  : FileImage(File(_imageFile!.path)),
+              fit: BoxFit.cover,
+            ),
           ),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.camera_alt, color: Colors.white, size: 30),
-              SizedBox(height: 4),
-              Text(
-                'Upload Photo',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ],
-          ),
+          // Only show the overlay if no image has been selected
+          child: _imageFile == null
+              ? Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15.0),
+                    color: Colors.black.withOpacity(0.3),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.camera_alt, color: Colors.white, size: 30),
+                      SizedBox(height: 4),
+                      Text(
+                        'Upload Photo',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                )
+              : null, // Render nothing if an image is selected
         ),
       ),
     );
@@ -246,42 +347,48 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
     );
   }
 
-  Widget _buildLocationInfo() {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12.0),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F5E9),
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: const Icon(
-            Icons.location_on,
-            color: Color(0xFF4CAF50),
-            size: 30,
-          ),
-        ),
-        const SizedBox(width: 16),
-        const Expanded(
-          child: Text.rich(
-            TextSpan(
-              text: 'Current Location: ',
-              style: TextStyle(fontSize: 15, color: Colors.grey),
-              children: [
-                TextSpan(
-                  text: 'Geo-tagged',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E3A5F),
-                  ),
-                ),
-              ],
+  Widget _buildLocationInfo(){
+
+   return GestureDetector(
+      // Call the location function when the widget is tapped
+      onTap: _getCurrentLocation,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            child: const Icon(
+              Icons.location_on,
+              color: Color(0xFF4CAF50),
+              size: 30,
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                text: 'Current Location: ',
+                style: const TextStyle(fontSize: 15, color: Colors.grey),
+                children: [
+                  TextSpan(
+                    text: _currentAddress,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _isLoading ? Colors.grey : const Color(0xFF1E3A5F),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
 
   Widget _buildSubmitButton() {
     return Container(
