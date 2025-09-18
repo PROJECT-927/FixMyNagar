@@ -9,7 +9,15 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 
 const String crackedRoadImageAsset = 'assets/cracked_road.jpg';
-const List<String> issueTypes = ['Pothole', 'Broken Streetlight', 'Garbage', 'Water Logging', 'Possible Stampade'];
+const List<String> issueTypes = [
+  'Pothole',
+  'Broken Streetlight',
+  'Garbage',
+  'Water Logging',
+  'Possible Stampade',
+  'Road Rage',
+  'Other',
+];
 const List<String> priorityLevels = ['Low', 'Medium', 'High'];
 
 class ReportIssuePage extends StatefulWidget {
@@ -50,7 +58,9 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
   }
 
   Future<void> _pickImage() async {
-    final XFile? selectedImage = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? selectedImage = await _picker.pickImage(
+      source: ImageSource.gallery,
+    );
     if (selectedImage != null) {
       setState(() {
         _imageFile = selectedImage;
@@ -98,11 +108,15 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
 
     try {
       Position position = await Geolocator.getCurrentPosition();
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
 
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
-        final address = '${place.street}, ${place.locality}, ${place.postalCode}';
+        final address =
+            '${place.street}, ${place.locality}, ${place.postalCode}';
         setState(() {
           _currentAddress = address;
           _isLoading = false;
@@ -191,13 +205,20 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
                 const SizedBox(height: 30),
                 _buildDescriptionField(),
                 const SizedBox(height: 20),
-                _buildDropdown('Select Issue', issueTypes, selectedIssueType, (val) {
+                _buildDropdown('Select Issue', issueTypes, selectedIssueType, (
+                  val,
+                ) {
                   setState(() => selectedIssueType = val!);
                 }),
                 const SizedBox(height: 20),
-                _buildDropdown('Select Risk', priorityLevels, selectedPriority, (val) {
-                  setState(() => selectedPriority = val!);
-                }),
+                _buildDropdown(
+                  'Select Risk',
+                  priorityLevels,
+                  selectedPriority,
+                  (val) {
+                    setState(() => selectedPriority = val!);
+                  },
+                ),
                 const SizedBox(height: 30),
                 _buildLocationInfo(),
                 const SizedBox(height: 30),
@@ -223,19 +244,34 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }
 
-  Widget _buildDropdown(String label, List<String> items, String selectedValue, Function(String?) onChanged) {
+  Widget _buildDropdown(
+    String label,
+    List<String> items,
+    String selectedValue,
+    Function(String?) onChanged,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: selectedValue,
+          initialValue: selectedValue,
           style: const TextStyle(color: Colors.white),
           dropdownColor: const Color(0xFF2A3445),
           decoration: InputDecoration(
@@ -246,7 +282,9 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
               borderSide: BorderSide.none,
             ),
           ),
-          items: items.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+          items: items
+              .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+              .toList(),
           onChanged: onChanged,
         ),
       ],
@@ -280,7 +318,10 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
                     children: [
                       Icon(Icons.camera_alt, color: Colors.white, size: 32),
                       SizedBox(height: 4),
-                      Text('Upload Photo', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      Text(
+                        'Upload Photo',
+                        style: TextStyle(color: Colors.white, fontSize: 13),
+                      ),
                     ],
                   ),
                 )
@@ -296,13 +337,29 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
         if (_audioPath != null)
           Column(
             children: [
-              const Text("Voice Note Added", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              const Text(
+                "Voice Note Added",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(icon: const Icon(Icons.play_circle_fill, color: Colors.green, size: 35), onPressed: _playRecording),
-                  IconButton(icon: const Icon(Icons.delete, color: Colors.red, size: 35), onPressed: _deleteRecording),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.play_circle_fill,
+                      color: Colors.green,
+                      size: 35,
+                    ),
+                    onPressed: _playRecording,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 35),
+                    onPressed: _deleteRecording,
+                  ),
                 ],
               ),
             ],
@@ -327,12 +384,20 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(_isRecording ? Icons.stop : Icons.mic, color: Colors.white, size: 30),
+                  Icon(
+                    _isRecording ? Icons.stop : Icons.mic,
+                    color: Colors.white,
+                    size: 30,
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     _isRecording ? 'Stop\nRecording' : 'Record\nVoice Note',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.2),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      height: 1.2,
+                    ),
                   ),
                 ],
               ),
@@ -350,7 +415,13 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
         decoration: BoxDecoration(
           color: const Color(0xFF2A3445),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -359,7 +430,11 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
             Expanded(
               child: Text(
                 _isLoading ? 'Fetching location...' : _currentAddress,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -378,7 +453,11 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF0072FF).withOpacity(0.5), blurRadius: 12, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: const Color(0xFF0072FF).withOpacity(0.5),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: ElevatedButton(
@@ -387,11 +466,17 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
         child: const Text(
           'Submit Report',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );

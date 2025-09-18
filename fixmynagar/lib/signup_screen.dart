@@ -2,7 +2,7 @@
 
 import 'package:fixmynagar/login.dart';
 import 'package:flutter/material.dart';
-import 'admin_login_screen.dart'; // Import the login page
+// Import the login page
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
